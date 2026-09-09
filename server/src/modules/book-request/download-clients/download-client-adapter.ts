@@ -89,6 +89,8 @@ export interface DownloadClientAdapter {
   readonly label: string;
   /** What this client can be handed, which is what decides whether a given grab may go to it. */
   readonly delivers: DownloadDelivery;
+  /** Only false when `remove` refuses `deleteFiles`, so the UI does not offer what would be refused. */
+  readonly canDeleteFiles?: boolean;
 
   add(release: GrabPayload, config: ResolvedClientConfig): Promise<{ clientKey: string }>;
   /**

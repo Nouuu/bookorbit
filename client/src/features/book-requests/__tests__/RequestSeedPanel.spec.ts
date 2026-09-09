@@ -33,6 +33,7 @@ function seed(overrides: Partial<BookRequestSeedStatus> = {}): BookRequestSeedSt
     seedingTimeSeconds: 7200,
     seedingTimeGoalMinutes: 4320,
     uploadedBytes: 1024 * 1024,
+    canDeleteFiles: true,
     ...overrides,
   }
 }
@@ -228,5 +229,21 @@ describe('RequestSeedPanel', () => {
     wrapper.getComponent(ConfirmDialogStub).vm.$emit('confirm')
 
     expect(wrapper.emitted('remove')?.[0]?.[0]).toMatchObject({ deleteFiles: true })
+  })
+
+  it('does not offer to delete files on a client that cannot, and says they stay', async () => {
+    apiMock.mockResolvedValue(response(JSON.stringify(seed({ canDeleteFiles: false }))))
+    const wrapper = await mountPanel()
+
+    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('cannot delete files')
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Remove from client')!
+      .trigger('click')
+    wrapper.getComponent(ConfirmDialogStub).vm.$emit('confirm')
+
+    expect(wrapper.emitted('remove')?.[0]?.[0]).toMatchObject({ deleteFiles: false })
   })
 })

@@ -3762,7 +3762,7 @@
         "clientsEmpty": {
           "title": "No download client yet",
           "body": "A direct HTTP download needs no client. Connect one so BookOrbit can fetch releases delivered by torrent or Usenet too.",
-          "note": "qBittorrent, Transmission, Deluge, NZBGet and SABnzbd are supported."
+          "note": "qBittorrent, Transmission, Deluge, rTorrent, NZBGet and SABnzbd are supported."
         },
         "summary": "{type} - category {category}, priority {priority}",
         "disabled": "Disabled",
@@ -3778,6 +3778,7 @@
           "qbittorrent": "qBittorrent",
           "transmission": "Transmission",
           "deluge": "Deluge",
+          "rtorrent": "rTorrent",
           "nzbget": "NZBGet",
           "sabnzbd": "SABnzbd"
         },
@@ -3833,7 +3834,7 @@
         "reconciliation": {
           "action": "Reconcile",
           "clean": "Every owned client item matches a retained BookOrbit download attempt.",
-          "unsupported": "This client cannot enumerate items by BookOrbit's ownership marker. For Deluge, enable the Label plugin; for Transmission, configure a category folder.",
+          "unsupported": "This client cannot enumerate items by BookOrbit's ownership marker. For Deluge, enable the Label plugin; for Transmission, configure a category folder; for rTorrent, set a category.",
           "truncated": "The client returned more than 1,000 owned items. Resolve the visible entries, then reconcile again.",
           "orphan": "No retained BookOrbit attempt owns this client item.",
           "failedAttempt": "The client still holds this item, but its attempt for \"{title}\" is marked failed.",
@@ -3992,7 +3993,7 @@
             "ratioBrief": "A positive decimal. Blank inherits from the tracker or client.",
             "time": "Seed time (minutes)",
             "timeBrief": "A positive whole number. Blank inherits from the tracker or client.",
-            "clientSupport": "qBittorrent accepts ratio and total seed time. Deluge and Transmission accept ratio only. Client global rules and whichever limit is reached first can stop seeding, so these values do not guarantee that every tracker minimum is met.",
+            "clientSupport": "qBittorrent accepts ratio and total seed time. Deluge and Transmission accept ratio only. rTorrent accepts neither. Client global rules and whichever limit is reached first can stop seeding, so these values do not guarantee that every tracker minimum is met.",
             "futureGrabs": "Changes apply to future grabs. Existing or adopted torrents can retain client-specific limits. Turning tracker fallback off leaves client defaults active; it does not mean unlimited seeding.",
             "reset": "Reset seeding settings",
             "summary": {
@@ -4291,6 +4292,7 @@
           "qbittorrent": "Your own qBittorrent. Needs an address and an account.",
           "transmission": "Your own Transmission. It has no categories, so the category becomes a subfolder of its download directory.",
           "deluge": "Your own Deluge. Sign in with the Web UI password; the category needs the Label plugin switched on.",
+          "rtorrent": "Your own rTorrent. The base URL is the XML-RPC endpoint itself, usually /RPC2, or plugins/httprpc/action.php when ruTorrent is in front. The category becomes the torrent label.",
           "nzbget": "Your own NZBGet. BookOrbit sends NZB files over its JSON-RPC API.",
           "sabnzbd": "Your own SABnzbd. BookOrbit sends NZB files using its API key."
         },
@@ -9542,6 +9544,7 @@
       "hours": "{value} h",
       "ofGoal": "{value} of {goal}",
       "deleteFiles": "Also delete the downloaded files",
+      "keepsFiles": "This client cannot delete files. They stay on disk after the torrent is removed.",
       "remove": "Remove from client",
       "removeHint": "BookOrbit never stops a seed on its own. The imported book stays in your library either way.",
       "confirm": {

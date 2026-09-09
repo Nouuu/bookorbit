@@ -61,6 +61,7 @@ export class RequestSeedService {
       seedingTimeSeconds: status.seed?.seedingTimeSeconds ?? null,
       seedingTimeGoalMinutes: status.seed?.seedingTimeGoalMinutes ?? null,
       uploadedBytes: status.seed?.uploadedBytes ?? null,
+      canDeleteFiles: adapter.canDeleteFiles ?? true,
     };
   }
 

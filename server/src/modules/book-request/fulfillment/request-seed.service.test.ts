@@ -93,7 +93,15 @@ describe('RequestSeedService.getSeedStatus', () => {
       seedingTimeSeconds: 60,
       seedingTimeGoalMinutes: 4320,
       uploadedBytes: 900,
+      canDeleteFiles: true,
     });
+  });
+
+  it('reports a client that refuses file deletion, so the option is not offered', async () => {
+    const { service, adapter } = makeService();
+    Object.assign(adapter, { canDeleteFiles: false });
+
+    await expect(service.getSeedStatus(7)).resolves.toMatchObject({ canDeleteFiles: false });
   });
 
   it('reports nothing for a request that was never grabbed', async () => {

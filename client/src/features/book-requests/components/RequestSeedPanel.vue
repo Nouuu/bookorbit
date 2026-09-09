@@ -198,10 +198,11 @@ function confirmRemove() {
       <div v-if="canManage" class="space-y-2.5 border-t border-border pt-3.5">
         <p class="text-xs text-muted-foreground">{{ t('bookRequests.seed.removeHint') }}</p>
 
-        <label class="flex items-center gap-2 text-sm text-foreground">
+        <label v-if="status.canDeleteFiles" class="flex items-center gap-2 text-sm text-foreground">
           <input v-model="deleteFiles" type="checkbox" class="h-3.5 w-3.5 rounded-xs border-border accent-primary" />
           {{ t('bookRequests.seed.deleteFiles') }}
         </label>
+        <p v-else class="text-xs text-muted-foreground">{{ t('bookRequests.seed.keepsFiles') }}</p>
 
         <Button variant="destructive-outline" size="sm" :disabled="busy" @click="handleRemove">
           {{ t('bookRequests.seed.remove') }}
