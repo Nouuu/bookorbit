@@ -1,3 +1,5 @@
+import type { DownloadFileRemoval } from '@bookorbit/types';
+
 import type { BookRequestDownloadRow } from '../../../db/schema';
 import { DownloadRemovalService } from './download-removal.service';
 
@@ -15,7 +17,7 @@ function download(overrides: Partial<BookRequestDownloadRow> = {}): BookRequestD
   } as BookRequestDownloadRow;
 }
 
-function makeService(options: { latest?: BookRequestDownloadRow | null; removeError?: Error } = {}) {
+function makeService(options: { latest?: BookRequestDownloadRow | null; removeError?: Error; fileReport?: DownloadFileRemoval } = {}) {
   const row = options.latest === undefined ? download() : options.latest;
   const downloads = {
     findLatestForRequests: vi.fn().mockResolvedValue(row ? new Map([[7, { download: row, downloadClientName: 'qbit' }]]) : new Map()),
@@ -29,7 +31,9 @@ function makeService(options: { latest?: BookRequestDownloadRow | null; removeEr
   };
   const clients = { resolveConfig: vi.fn().mockResolvedValue({ id: 4, adapterType: 'qbittorrent' }) };
   const adapter = {
-    remove: options.removeError ? vi.fn().mockRejectedValue(options.removeError) : vi.fn().mockResolvedValue(undefined),
+    remove: options.removeError
+      ? vi.fn().mockRejectedValue(options.removeError)
+      : vi.fn().mockResolvedValue(options.fileReport ?? { requested: false, deleted: false, leftAt: null }),
   };
   const registry = { require: vi.fn().mockReturnValue(adapter) };
   const direct = {
@@ -138,5 +142,42 @@ describe('DownloadRemovalService.cleanupStagedDirectDownload', () => {
     const { service } = makeService({ latest: staged, removeError: new Error('busy') });
 
     await expect(service.cleanupStagedDirectDownload(staged)).resolves.toBeUndefined();
+  });
+});
+
+describe('DownloadRemovalService.removeAttempt file reporting', () => {
+  it('answers what became of the files, not only that the torrent went', async () => {
+    const { service } = makeService({ fileReport: { requested: true, deleted: true, leftAt: null } });
+
+    await expect(service.removeAttempt(7, 11, true, 'ann')).resolves.toEqual({
+      wasInFlight: true,
+      files: { requested: true, deleted: true, leftAt: null },
+    });
+  });
+
+  it('reports files the client left behind, and where, rather than claiming a deletion', async () => {
+    const { service } = makeService({ fileReport: { requested: true, deleted: false, leftAt: '/downloads/A Book' } });
+
+    const outcome = await service.removeAttempt(7, 11, true, 'ann');
+
+    expect(outcome.files).toEqual({ requested: true, deleted: false, leftAt: '/downloads/A Book' });
+  });
+
+  it('reports the staging of a direct download as deleted, because its bytes always go with it', async () => {
+    const { service } = makeService({ latest: download({ source: 'direct_url', downloadClientId: null }) });
+
+    const outcome = await service.removeAttempt(7, 11, false, 'ann');
+
+    expect(outcome.files).toEqual({ requested: true, deleted: true, leftAt: null });
+  });
+
+  it('reports nothing about files for an attempt that was never handed to anything', async () => {
+    const { service } = makeService({ latest: download({ clientHash: null }) });
+
+    const outcome = await service.removeAttempt(7, 11, true, 'ann');
+
+    // Not `requested: true`: there was never a client holding files, so warning that they were
+    // left behind would describe files that never existed.
+    expect(outcome.files).toEqual({ requested: false, deleted: false, leftAt: null });
   });
 });

@@ -6,7 +6,7 @@ import type { IndexerColor, ReleaseUnitChoice } from "./indexer";
  * deliberately absent: it has no address, no credentials and nothing to choose, so making it a
  * configurable client type would only ask an operator to create a record of nothing.
  */
-export const DOWNLOAD_CLIENT_TYPES = ["qbittorrent", "transmission", "deluge"] as const;
+export const DOWNLOAD_CLIENT_TYPES = ["qbittorrent", "transmission", "deluge", "rtorrent"] as const;
 export type DownloadClientType = (typeof DOWNLOAD_CLIENT_TYPES)[number];
 
 /**
@@ -20,6 +20,7 @@ export const DOWNLOAD_CLIENT_DELIVERY: Record<DownloadClientType, DownloadDelive
   qbittorrent: "torrent",
   transmission: "torrent",
   deluge: "torrent",
+  rtorrent: "torrent",
 };
 
 export interface DownloadClientPathMapping {
@@ -273,6 +274,31 @@ export interface BookRequestSeedStatus {
   seedingTimeSeconds: number | null;
   seedingTimeGoalMinutes: number | null;
   uploadedBytes: number | null;
+}
+
+/**
+ * What became of the downloaded files when a torrent was removed. Reported rather than assumed:
+ * not every client can delete data, and one that answers without deleting must not read as a
+ * success. `leftAt` is in the client's own namespace, which is the only one it can name.
+ */
+export interface DownloadFileRemoval {
+  requested: boolean;
+  deleted: boolean;
+  leftAt: string | null;
+}
+
+/**
+ * An action that did what was asked except for one part. Carried back in the response to the
+ * action that caused it and never stored: an operator sees it at the moment they act, and a
+ * stored copy would outlive the moment it means anything.
+ */
+export const PARTIAL_OUTCOME_CODES = ["files_not_deleted", "torrent_not_labelled"] as const;
+export type PartialOutcomeCode = (typeof PARTIAL_OUTCOME_CODES)[number];
+
+export interface PartialOutcome {
+  code: PartialOutcomeCode;
+  /** The one fact the message needs, such as where files were left. Never a raw client payload. */
+  detail: string | null;
 }
 
 /**

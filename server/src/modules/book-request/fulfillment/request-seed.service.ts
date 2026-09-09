@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { WORKER_WRITABLE_BOOK_REQUEST_STATUSES } from '@bookorbit/types';
-import type { BookRequestItem, BookRequestSeedStatus } from '@bookorbit/types';
+import type { BookRequestSeedStatus, DownloadFileRemoval, PartialOutcome, BookRequestActionResult } from '@bookorbit/types';
 
 import type { RequestUser } from '../../../common/types/request-user';
 import { BookRequestGateway } from '../book-request.gateway';
@@ -69,8 +69,8 @@ export class RequestSeedService {
    * going to finish it. The row is failed directly rather than through the retry path, so the
    * automation does not immediately undo a removal an approver asked for.
    */
-  async removeFromClient(requestId: number, downloadId: number, deleteFiles: boolean, user: RequestUser): Promise<BookRequestItem> {
-    const wasInFlight = await this.removal.removeAttempt(requestId, downloadId, deleteFiles, user.username);
+  async removeFromClient(requestId: number, downloadId: number, deleteFiles: boolean, user: RequestUser): Promise<BookRequestActionResult> {
+    const { wasInFlight, files } = await this.removal.removeAttempt(requestId, downloadId, deleteFiles, user.username);
 
     if (wasInFlight) {
       // Conditional, so removing the transfer under a request somebody has already cancelled or
@@ -82,6 +82,15 @@ export class RequestSeedService {
       this.gateway.emitChanged();
     }
 
-    return this.bookRequests.getOne(requestId, user);
+    return { request: await this.bookRequests.getOne(requestId, user), partial: filesLeftBehind(files) };
   }
+}
+
+/**
+ * The one thing a removal can fail to do while still doing what it was asked. Null on a clean
+ * removal, which is what makes its presence mean something to the operator reading it.
+ */
+function filesLeftBehind(files: DownloadFileRemoval): PartialOutcome | null {
+  if (!files.requested || files.deleted) return null;
+  return { code: 'files_not_deleted', detail: files.leftAt };
 }

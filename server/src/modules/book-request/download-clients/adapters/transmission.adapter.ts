@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import type { DownloadClientTestResult } from '@bookorbit/types';
+import type { DownloadClientTestResult, DownloadFileRemoval } from '@bookorbit/types';
 
 import { ensureSafeUrl } from '../../../../common/utils/ssrf.utils';
 import { sanitizeLogValue } from '../../../../common/utils/log-sanitize.utils';
@@ -208,8 +208,11 @@ export class TransmissionAdapter implements DownloadClientAdapter {
     };
   }
 
-  async remove(hash: string, config: ResolvedClientConfig, opts: { deleteFiles: boolean }): Promise<void> {
+  async remove(hash: string, config: ResolvedClientConfig, opts: { deleteFiles: boolean }): Promise<DownloadFileRemoval> {
     await this.rpc(config, 'torrent-remove', { ids: [hash.toLowerCase()], 'delete-local-data': opts.deleteFiles });
+
+    // The client deletes server-side, so a call that did not throw did what it was asked.
+    return { requested: opts.deleteFiles, deleted: opts.deleteFiles, leftAt: null };
   }
 
   async test(config: ResolvedClientConfig): Promise<DownloadClientTestResult> {

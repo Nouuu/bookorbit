@@ -33,6 +33,7 @@ import { PathMappingService } from './download-clients/path-mapping.service';
 import { QbittorrentAdapter } from './download-clients/adapters/qbittorrent.adapter';
 import { TransmissionAdapter } from './download-clients/adapters/transmission.adapter';
 import { DelugeAdapter } from './download-clients/adapters/deluge.adapter';
+import { RtorrentAdapter } from './download-clients/adapters/rtorrent.adapter';
 import { INDEXER_ADAPTERS } from './indexers/indexer-adapter';
 import { IndexerConfigService } from './indexers/indexer-config.service';
 import { IndexerController } from './indexers/indexer.controller';
@@ -107,10 +108,16 @@ import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
     QbittorrentAdapter,
     TransmissionAdapter,
     DelugeAdapter,
+    RtorrentAdapter,
     {
       provide: DOWNLOAD_CLIENT_ADAPTERS,
-      useFactory: (qbittorrent: QbittorrentAdapter, transmission: TransmissionAdapter, deluge: DelugeAdapter) => [qbittorrent, transmission, deluge],
-      inject: [QbittorrentAdapter, TransmissionAdapter, DelugeAdapter],
+      useFactory: (qbittorrent: QbittorrentAdapter, transmission: TransmissionAdapter, deluge: DelugeAdapter, rtorrent: RtorrentAdapter) => [
+        qbittorrent,
+        transmission,
+        deluge,
+        rtorrent,
+      ],
+      inject: [QbittorrentAdapter, TransmissionAdapter, DelugeAdapter, RtorrentAdapter],
     },
 
     IndexerRepository,

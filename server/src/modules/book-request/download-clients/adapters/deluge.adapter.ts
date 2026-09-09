@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import type { DownloadClientTestResult } from '@bookorbit/types';
+import type { DownloadClientTestResult, DownloadFileRemoval } from '@bookorbit/types';
 
 import { ensureSafeUrl } from '../../../../common/utils/ssrf.utils';
 import { sanitizeLogValue } from '../../../../common/utils/log-sanitize.utils';
@@ -221,11 +221,14 @@ export class DelugeAdapter implements DownloadClientAdapter {
     };
   }
 
-  async remove(hash: string, config: ResolvedClientConfig, opts: { deleteFiles: boolean }): Promise<void> {
+  async remove(hash: string, config: ResolvedClientConfig, opts: { deleteFiles: boolean }): Promise<DownloadFileRemoval> {
     const removed = await this.rpc<boolean>(config, 'core.remove_torrent', [hash.toLowerCase(), opts.deleteFiles]);
     // Deluge answers a torrent it does not hold with `false` rather than an error, and a removal
     // that silently did nothing must not read as a success to the caller cleaning up after it.
     if (removed === false) throw new BadRequestException('Deluge did not remove that torrent');
+
+    // The client deletes server-side, so a call that did not throw did what it was asked.
+    return { requested: opts.deleteFiles, deleted: opts.deleteFiles, leftAt: null };
   }
 
   async test(config: ResolvedClientConfig): Promise<DownloadClientTestResult> {

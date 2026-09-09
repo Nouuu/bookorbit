@@ -1,4 +1,4 @@
-import type { DownloadClientTestResult, DownloadClientType, DownloadDelivery } from '@bookorbit/types';
+import type { DownloadClientTestResult, DownloadClientType, DownloadDelivery, DownloadFileRemoval, PartialOutcome } from '@bookorbit/types';
 
 /** A client row with its credentials already decrypted. Never logged, never returned over HTTP. */
 export interface ResolvedClientConfig {
@@ -89,14 +89,23 @@ export interface DownloadClientAdapter {
   /** What this client can be handed, which is what decides whether a given grab may go to it. */
   readonly delivers: DownloadDelivery;
 
-  add(release: GrabPayload, config: ResolvedClientConfig): Promise<{ clientHash: string }>;
+  /**
+   * `partial` names anything the add could not finish while still handing the torrent over, such
+   * as a label the client would not take. Optional: a client with nothing to report omits it.
+   */
+  add(release: GrabPayload, config: ResolvedClientConfig): Promise<{ clientHash: string; partial?: PartialOutcome | null }>;
   /**
    * Batched deliberately: one poll tick is one HTTP call per client however many downloads are
    * in flight. A hash the client no longer knows about is simply absent from the result.
    */
   status(hashes: string[], config: ResolvedClientConfig): Promise<DownloadStatus[]>;
   listOwned(config: ResolvedClientConfig): Promise<OwnedDownloadClientInventory>;
-  remove(hash: string, config: ResolvedClientConfig, opts: { deleteFiles: boolean }): Promise<void>;
+  /**
+   * Answers what became of the files, not only what became of the torrent. A client that cannot
+   * delete data must not have its removal read as a deletion, so this is reported rather than
+   * inferred from the absence of an error.
+   */
+  remove(hash: string, config: ResolvedClientConfig, opts: { deleteFiles: boolean }): Promise<DownloadFileRemoval>;
   test(config: ResolvedClientConfig): Promise<DownloadClientTestResult>;
   /**
    * Drop anything cached against this client id. Called whenever a row's URL or credentials

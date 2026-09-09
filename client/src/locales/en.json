@@ -2846,7 +2846,8 @@
         "clientTypes": {
           "qbittorrent": "qBittorrent",
           "transmission": "Transmission",
-          "deluge": "Deluge"
+          "deluge": "Deluge",
+          "rtorrent": "rTorrent"
         },
         "color": {
           "label": "Color",
@@ -3226,7 +3227,8 @@
         "clientTypeDescriptions": {
           "qbittorrent": "Your own qBittorrent. Needs an address and an account.",
           "transmission": "Your own Transmission. It has no categories, so the category becomes a subfolder of its download directory.",
-          "deluge": "Your own Deluge. Sign in with the Web UI password; the category needs the Label plugin switched on."
+          "deluge": "Your own Deluge. Sign in with the Web UI password; the category needs the Label plugin switched on.",
+          "rtorrent": "Your own rTorrent. The base URL is the XML-RPC endpoint itself, usually /RPC2, or plugins/httprpc/action.php when ruTorrent is in front. The category becomes the torrent label."
         },
         "searchHealth": {
           "failingOnce": "Last search failed",
@@ -6496,6 +6498,10 @@
       "bulkRejected": "{count, plural, one {# request rejected} other {# requests rejected}}",
       "bulkRejectedPartial": "{done} rejected, {failed} could not be",
       "importDiscarded": "The imported file was discarded"
+    },
+    "partial": {
+      "files_not_deleted": "The torrent was removed, but the download client did not delete its files",
+      "torrent_not_labelled": "The torrent was added, but the download client would not label it"
     },
     "errors": {
       "loadFailed": "Could not load requests",

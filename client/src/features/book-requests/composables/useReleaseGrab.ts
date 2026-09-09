@@ -8,6 +8,7 @@ import type {
   GrabBookRequestPayload,
   GrabFailureCode,
   GrabRefusal,
+  PartialOutcome,
   ReleaseCandidateItem,
   ReleaseFileInspection,
 } from '@bookorbit/types'
@@ -24,6 +25,8 @@ const REFUSAL_KEYS: Partial<Record<GrabFailureCode, string>> = {
 /** The refusal travels back with the call it belongs to, so one grab cannot describe another. */
 export interface ReleaseGrabOutcome {
   item: BookRequestItem | null
+  /** What the client could not finish while still taking the torrent. Null on a clean grab. */
+  partial?: PartialOutcome | null
   reason: string | null
   errorCode: GrabFailureCode | null
 }
@@ -89,7 +92,13 @@ export function useReleaseGrab(options: ReleaseGrabOptions) {
     }
     setRequest(outcome.item)
     manualOpen.value = false
-    toast.success(t('bookRequests.toasts.grabbed'))
+    // A torrent the client took but would not label still downloads, so this is a warning rather
+    // than a failure, and saying "grabbed" alone would hide it.
+    if (outcome.partial) {
+      toast.warning(t(`bookRequests.partial.${outcome.partial.code}`), outcome.partial.detail ? { description: outcome.partial.detail } : undefined)
+    } else {
+      toast.success(t('bookRequests.toasts.grabbed'))
+    }
     void router.push({ name: 'book-request-detail', params: { id: request.value.id }, query: route.query })
   }
 

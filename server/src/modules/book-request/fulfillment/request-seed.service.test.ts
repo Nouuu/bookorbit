@@ -55,7 +55,7 @@ function makeService(
         },
       ],
     ),
-    remove: vi.fn().mockResolvedValue(undefined),
+    remove: vi.fn().mockResolvedValue({ requested: false, deleted: false, leftAt: null }),
   };
   const registry = { require: vi.fn().mockReturnValue(adapter) };
   const bookRequests = { getOne: vi.fn().mockResolvedValue({ id: 7 }) };
@@ -181,6 +181,34 @@ describe('RequestSeedService.removeFromClient', () => {
     const { service } = makeService({ latest: download({ requestId: 99 }) });
 
     await expect(service.removeFromClient(7, 11, false, user())).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('answers with nothing outstanding when the removal did everything it was asked', async () => {
+    const { service, adapter } = makeService();
+    adapter.remove.mockResolvedValue({ requested: true, deleted: true, leftAt: null });
+
+    const result = await service.removeFromClient(7, 11, true, user());
+
+    expect(result.partial).toBeNull();
+    expect(result.request).toEqual(expect.objectContaining({ id: 7 }));
+  });
+
+  it('tells the approver the files were left behind, and where, rather than claiming a deletion', async () => {
+    const { service, adapter } = makeService();
+    adapter.remove.mockResolvedValue({ requested: true, deleted: false, leftAt: '/downloads/A Book' });
+
+    const result = await service.removeFromClient(7, 11, true, user());
+
+    expect(result.partial).toEqual({ code: 'files_not_deleted', detail: '/downloads/A Book' });
+  });
+
+  it('says nothing about files the approver never asked to delete', async () => {
+    const { service, adapter } = makeService();
+    adapter.remove.mockResolvedValue({ requested: false, deleted: false, leftAt: null });
+
+    const result = await service.removeFromClient(7, 11, false, user());
+
+    expect(result.partial).toBeNull();
   });
 
   it('refuses an attempt whose download client row is gone', async () => {

@@ -128,6 +128,7 @@ describe('DownloadClientsPanel', () => {
       'qbittorrent',
       'transmission',
       'deluge',
+      'rtorrent',
     ])
     expect(sheet().querySelector('#download-client-name')).toBeNull()
 
@@ -136,6 +137,16 @@ describe('DownloadClientsPanel', () => {
 
     expect(sheet().querySelector('#download-client-name')).not.toBeNull()
     expect(sheet().querySelector('#download-client-url')).not.toBeNull()
+  })
+
+  it('offers rTorrent with the description that says what it needs', async () => {
+    const wrapper = await mountPanel()
+    await clickInPanel(wrapper, 'Add client')
+
+    const option = [...sheet().querySelectorAll<HTMLInputElement>('input[name="download-client-type"]')].find((input) => input.value === 'rtorrent')
+    expect(option).toBeDefined()
+    expect(sheet().textContent).toContain('rTorrent')
+    expect(sheet().textContent).toContain('RPC2')
   })
 
   it('keeps the list rendered while a row is being edited', async () => {

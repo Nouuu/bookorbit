@@ -33,8 +33,10 @@ import type {
   BookRequestHandbackCode,
   BookRequestItem,
   BookRequestStatus,
+  BookRequestActionResult,
   GrabFailureCode,
   IndexerSearchFailure,
+  PartialOutcome,
   ReleaseFileInspection,
   ReleaseFileInspectionStatus,
   ReleaseManifestFile,
@@ -193,7 +195,7 @@ export class RequestFulfillmentService {
    * A null `user` is the automation grabbing unattended, which is recorded on the attempt: it is
    * what makes that attempt eligible to be retried with the next-best release.
    */
-  async grab(requestId: number, dto: GrabBookRequestDto, user: RequestUser | null): Promise<BookRequestItem> {
+  async grab(requestId: number, dto: GrabBookRequestDto, user: RequestUser | null): Promise<BookRequestActionResult> {
     const joined = await this.requests.findById(requestId);
     if (!joined) throw new NotFoundException('Book request not found');
     const request = joined.request;
@@ -232,7 +234,7 @@ export class RequestFulfillmentService {
     }
   }
 
-  private async startGrab(requestId: number, dto: GrabBookRequestDto, user: RequestUser | null): Promise<BookRequestItem> {
+  private async startGrab(requestId: number, dto: GrabBookRequestDto, user: RequestUser | null): Promise<BookRequestActionResult> {
     // Asking the source is the part worth recording when it refuses, because a refusal nobody
     // recorded is exactly the one that gets asked about later: "it downloaded from the second
     // source, but was the first one even tried?"
@@ -278,6 +280,9 @@ export class RequestFulfillmentService {
       throw error;
     }
 
+    // Anything the client could not finish while still taking the torrent. Carried back to whoever
+    // pressed Grab; an automated grab has nobody reading a response, so for it the log is the record.
+    let partial: PartialOutcome | null = null;
     try {
       if (client === null) {
         await this.direct.add({
@@ -289,7 +294,7 @@ export class RequestFulfillmentService {
       } else {
         const config = await this.clients.resolveConfig(client.id);
         const adapter = this.registry.require(config.adapterType);
-        await this.withTransientRetry(user === null, requestId, 'client', () =>
+        const added = await this.withTransientRetry(user === null, requestId, 'client', () =>
           adapter.add(
             {
               magnet: grab.magnet,
@@ -303,6 +308,7 @@ export class RequestFulfillmentService {
             config,
           ),
         );
+        partial = added.partial ?? null;
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -333,7 +339,7 @@ export class RequestFulfillmentService {
     );
     this.gateway.emitChanged();
 
-    return this.toItem(requestId, user?.id ?? null);
+    return { request: await this.toItem(requestId, user?.id ?? null), partial };
   }
 
   private async withTransientRetry<T>(automated: boolean, requestId: number, phase: 'source' | 'client', run: () => Promise<T>): Promise<T> {

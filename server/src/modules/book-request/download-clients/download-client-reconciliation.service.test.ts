@@ -39,7 +39,7 @@ function makeService() {
   };
   const adapter = {
     listOwned: vi.fn().mockResolvedValue({ supported: true, truncated: false, items: [] }),
-    remove: vi.fn().mockResolvedValue(undefined),
+    remove: vi.fn().mockResolvedValue({ requested: false, deleted: false, leftAt: null }),
   };
   const registry = { require: vi.fn().mockReturnValue(adapter) };
   const downloads = {

@@ -1,3 +1,4 @@
+import type { DownloadFileRemoval } from '@bookorbit/types';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { IN_FLIGHT_BOOK_REQUEST_DOWNLOAD_STATUSES } from '@bookorbit/types';
 
@@ -35,15 +36,20 @@ export class DownloadRemovalService {
    * Strict: an operator who pressed Remove wants the client's own refusal, not a shrug. Resolves
    * to whether the attempt was still working, which is what decides the request's own fate.
    */
-  async removeAttempt(requestId: number, downloadId: number, deleteFiles: boolean, actor: string): Promise<boolean> {
+  async removeAttempt(
+    requestId: number,
+    downloadId: number,
+    deleteFiles: boolean,
+    actor: string,
+  ): Promise<{ wasInFlight: boolean; files: DownloadFileRemoval }> {
     const download = await this.downloads.findById(downloadId);
     if (!download || download.requestId !== requestId) throw new NotFoundException('That download attempt does not belong to this request');
     if (download.source !== 'direct_url' && download.downloadClientId === null) {
       throw new BadRequestException('That attempt is no longer attached to a download client');
     }
 
-    await this.detach(download, deleteFiles);
-    return this.failIfInFlight(download, `Removed from the download client by ${actor}`);
+    const files = await this.detach(download, deleteFiles);
+    return { wasInFlight: await this.failIfInFlight(download, `Removed from the download client by ${actor}`), files };
   }
 
   /**
@@ -113,25 +119,31 @@ export class DownloadRemovalService {
   }
 
   /** A direct file is ours to drop; a torrent is detached from the client that holds it. */
-  private async detach(download: BookRequestDownloadRow, deleteFiles: boolean): Promise<void> {
-    // An attempt a source refused was never handed to anything, so there is nothing holding it.
-    if (download.clientHash === null) return;
-
+  private async detach(download: BookRequestDownloadRow, deleteFiles: boolean): Promise<DownloadFileRemoval> {
     const isDirect = download.source === 'direct_url';
     // There is no swarm to preserve on a staged file, so its bytes always go with the attempt.
     const shouldDeleteFiles = isDirect || deleteFiles;
 
+    // An attempt a source refused was never handed to anything, so there is nothing holding it and
+    // nothing to say about files. Reporting a deletion as requested here would warn an operator
+    // about files that never existed.
+    if (download.clientHash === null) return { requested: false, deleted: false, leftAt: null };
+
+    let files: DownloadFileRemoval;
     if (isDirect) {
       await this.direct.remove(download.clientHash, { deleteFiles: shouldDeleteFiles });
+      // BookOrbit owns the staging directory, so a call that did not throw emptied it.
+      files = { requested: shouldDeleteFiles, deleted: shouldDeleteFiles, leftAt: null };
     } else {
       const config = await this.clients.resolveConfig(download.downloadClientId as number);
       const adapter = this.registry.require(config.adapterType);
-      await adapter.remove(download.clientHash, config, { deleteFiles: shouldDeleteFiles });
+      files = await adapter.remove(download.clientHash, config, { deleteFiles: shouldDeleteFiles });
     }
 
     this.logger.log(
-      `[book_request.remove_download] [end] requestId=${download.requestId} downloadId=${download.id} clientId=${download.downloadClientId ?? 'direct'} source=${download.source} deleteFiles=${shouldDeleteFiles} - download removed`,
+      `[book_request.remove_download] [end] requestId=${download.requestId} downloadId=${download.id} clientId=${download.downloadClientId ?? 'direct'} source=${download.source} deleteFiles=${shouldDeleteFiles} filesDeleted=${files.deleted} - download removed`,
     );
+    return files;
   }
 
   /**

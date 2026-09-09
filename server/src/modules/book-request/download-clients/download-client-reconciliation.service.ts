@@ -117,9 +117,9 @@ export class DownloadClientReconciliationService {
       throw reconciliationError('DOWNLOAD_CLIENT_RECONCILIATION_NOT_ORPHAN', 'That client item is still attached to a download attempt');
     }
 
-    await adapter.remove(hash, config, { deleteFiles });
+    const files = await adapter.remove(hash, config, { deleteFiles });
     this.logger.log(
-      `[download_client.reconcile] [end] clientId=${clientId} hash=${hash} action=remove deleteFiles=${deleteFiles} - orphaned client item removed`,
+      `[download_client.reconcile] [end] clientId=${clientId} hash=${hash} action=remove deleteFiles=${deleteFiles} filesDeleted=${files.deleted} - orphaned client item removed`,
     );
   }
 }

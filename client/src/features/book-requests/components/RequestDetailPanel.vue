@@ -497,7 +497,19 @@ async function handleFulfill() {
 
 async function handleRemoveDownload(payload: { request: BookRequestItem; downloadId: number; deleteFiles: boolean }) {
   const outcome = await actions.removeDownload(payload.request.id, payload.downloadId, { deleteFiles: payload.deleteFiles })
-  if (applyUpdate(outcome, 'bookRequests.errors.removeDownloadFailed')) toast.success(t('bookRequests.toasts.downloadRemoved'))
+  if (applyUpdate(outcome, 'bookRequests.errors.removeDownloadFailed')) reportOutcome(outcome, 'bookRequests.toasts.downloadRemoved')
+}
+
+/**
+ * A removal that left the files behind is not a failure, and calling it a success would be a lie.
+ * The warning carries what the client reported so the operator can go and look.
+ */
+function reportOutcome(outcome: ActionOutcome, successKey: string) {
+  if (!outcome.partial) {
+    toast.success(t(successKey))
+    return
+  }
+  toast.warning(t(`bookRequests.partial.${outcome.partial.code}`), outcome.partial.detail ? { description: outcome.partial.detail } : undefined)
 }
 
 async function handleChooseReleaseUnit(unitIndex: number) {

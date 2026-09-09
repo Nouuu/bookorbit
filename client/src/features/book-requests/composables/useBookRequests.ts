@@ -3,9 +3,10 @@ import { bookRequestActionErrorCode, bookRequestSubmitErrorCode, grabFailureCode
 import { api } from '@/lib/api'
 import { fulfilmentBase } from '../fulfilmentBase'
 import type {
-  BookRequestItem,
   BookRequestActionErrorCode,
+  BookRequestBulkResult,
   BookRequestFailureMeta,
+  BookRequestItem,
   BookRequestMediaKind,
   BookRequestPage,
   BookRequestRequesterOption,
@@ -13,13 +14,13 @@ import type {
   BookRequestSortField,
   BookRequestStatus,
   BookRequestSubmitErrorCode,
-  BookRequestBulkResult,
   BulkBookRequestsPayload,
   BulkRejectBookRequestsPayload,
   DecideBookRequestPayload,
   FulfillBookRequestPayload,
   GrabBookRequestPayload,
   GrabFailureCode,
+  PartialOutcome,
   RemoveBookRequestDownloadPayload,
   SelectReleaseUnitPayload,
 } from '@bookorbit/types'
@@ -219,12 +220,23 @@ async function postRequest(path: string, body?: unknown): Promise<ActionOutcome>
       grabFailureCode(payload?.errorCode) ?? bookRequestActionErrorCode(payload?.errorCode) ?? bookRequestSubmitErrorCode(payload?.errorCode)
     return {
       item: null,
+      partial: null,
       reason: message?.trim() ? message.trim() : null,
       errorCode,
       errorMeta: payload?.errorMeta ?? null,
     }
   }
-  return { item: (await res.json()) as BookRequestItem, reason: null, errorCode: null, errorMeta: null }
+  const payload: unknown = await res.json()
+  // Two shapes answer these routes: the row on its own, and the row wrapped with anything the
+  // action could not finish. One reader serves both, so a new wrapped route needs no new plumbing.
+  const wrapped = typeof payload === 'object' && payload !== null && 'request' in payload
+  return {
+    item: wrapped ? (payload as { request: BookRequestItem }).request : (payload as BookRequestItem),
+    partial: wrapped ? ((payload as { partial?: PartialOutcome | null }).partial ?? null) : null,
+    reason: null,
+    errorCode: null,
+    errorMeta: null,
+  }
 }
 
 /**
@@ -236,6 +248,8 @@ async function postRequest(path: string, body?: unknown): Promise<ActionOutcome>
  */
 export interface ActionOutcome {
   item: BookRequestItem | null
+  /** What the action did everything except. Null when it finished cleanly, which is the normal case. */
+  partial?: PartialOutcome | null
   reason: string | null
   errorCode: GrabFailureCode | BookRequestActionErrorCode | BookRequestSubmitErrorCode | null
   errorMeta?: BookRequestFailureMeta | null

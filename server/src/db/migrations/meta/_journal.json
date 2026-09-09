@@ -610,6 +610,13 @@
       "when": 1788884825211,
       "tag": "0086_add_annotation_source_created_at",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1789029336315,
+      "tag": "0087_add_rtorrent_download_client",
+      "breakpoints": true
     }
   ]
 }

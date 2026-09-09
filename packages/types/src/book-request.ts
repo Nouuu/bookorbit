@@ -1,3 +1,5 @@
+import type { PartialOutcome } from "./download-client";
+
 import { CONCRETE_BOOK_MEDIA_KINDS, type ConcreteBookMediaKind } from "./book";
 import type { BookRequestDownloadItem } from "./download-client";
 
@@ -570,4 +572,13 @@ export interface BookRequestBulkFailure {
 export interface BookRequestBulkResult {
   updated: BookRequestItem[];
   failed: BookRequestBulkFailure[];
+}
+
+/**
+ * The request as it now stands, plus anything the action could not finish. `partial` is null on a
+ * clean run, which is what makes its presence mean something.
+ */
+export interface BookRequestActionResult {
+  request: BookRequestItem;
+  partial: PartialOutcome | null;
 }

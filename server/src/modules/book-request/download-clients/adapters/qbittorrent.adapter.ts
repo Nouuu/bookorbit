@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import type { DownloadClientTestResult } from '@bookorbit/types';
+import type { DownloadClientTestResult, DownloadFileRemoval } from '@bookorbit/types';
 
 import { ensureSafeUrl } from '../../../../common/utils/ssrf.utils';
 import { sanitizeLogValue } from '../../../../common/utils/log-sanitize.utils';
@@ -196,13 +196,16 @@ export class QbittorrentAdapter implements DownloadClientAdapter {
     }
   }
 
-  async remove(hash: string, config: ResolvedClientConfig, opts: { deleteFiles: boolean }): Promise<void> {
+  async remove(hash: string, config: ResolvedClientConfig, opts: { deleteFiles: boolean }): Promise<DownloadFileRemoval> {
     const body = new URLSearchParams({ hashes: hash.toLowerCase(), deleteFiles: String(opts.deleteFiles) });
     await this.call(config, '/api/v2/torrents/delete', {
       method: 'POST',
       body,
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
+
+    // The client deletes server-side, so a call that did not throw did what it was asked.
+    return { requested: opts.deleteFiles, deleted: opts.deleteFiles, leftAt: null };
   }
 
   async test(config: ResolvedClientConfig): Promise<DownloadClientTestResult> {
